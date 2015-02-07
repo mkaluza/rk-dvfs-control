@@ -16,7 +16,7 @@ static ssize_t dvfs_table_show(struct kobject *kobj, struct kobj_attribute *attr
 	int i;
 	if (!table) return 0;
 	for (i=0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
-		count += sprintf(buf+count, "%d: freq: %u MHz, volt: %u mV\n", i, table[i].frequency/1000,table[i].index/1000);
+		count += sprintf(buf+count, "%u MHz: %u mV\n", table[i].frequency/1000,table[i].index/1000);
 	}
 	return count;
 }
@@ -28,17 +28,24 @@ static ssize_t dvfs_table_store(struct kobject *kobj, struct kobj_attribute *att
 	unsigned int v;
 
 	if (!table) return -EINVAL;
-	ret = sscanf(buf, "%d", &index);
-	if (!ret) return -EINVAL;
+	ret = sscanf(buf, "%d %u", &index, &v);
+	if (!ret) {
+		printk(KERN_ERR "invalid input %s", buf);
+		return -EINVAL;
+	}
 
 	for (i=0; table[i].frequency != CPUFREQ_TABLE_END; i++)
-		if (i == index) break;
-	if (table[i].frequency == CPUFREQ_TABLE_END) return -EINVAL;
+		if (table[i].frequency/1000 == index) break;
 
-	buf+=ret+1;
+	if (table[i].frequency == CPUFREQ_TABLE_END) {
+		printk(KERN_ERR "invalid frequency %d", index);
+		return -EINVAL;
+	}
 
-	ret = sscanf(buf, "%u", &v);
-	if (!ret || v<600 || v>1500) return -EINVAL;
+	if (v<600 || v>1500) {
+		printk(KERN_ERR "voltage out of range: %u", v);
+		return -EINVAL;
+	}
 	if (v<1200)
 		v = (v/25)*25*1000;
 	else if (v<2400)
