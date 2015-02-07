@@ -38,7 +38,7 @@ static ssize_t dvfs_table_store(struct kobject *kobj, struct kobj_attribute *att
 	buf+=ret+1;
 
 	ret = sscanf(buf, "%u", &v);
-	if (!ret || v<800 || v>1450) return -EINVAL;
+	if (!ret || v<600 || v>1450) return -EINVAL;
 	table[i].index = (v/25)*25*1000;
 
 	return count;
