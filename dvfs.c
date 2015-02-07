@@ -10,24 +10,24 @@
 #define ATTR_RW(_name)	\
 	static struct kobj_attribute _name##_interface = __ATTR(_name, 0644, _name##_show, _name##_store);
 
-static ssize_t cpu_table_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+static ssize_t dvfs_table_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf, struct cpufreq_frequency_table *table)
 {
-	struct cpufreq_frequency_table *table = dvfs_get_freq_volt_table(clk_get(NULL, "cpu"));
 	int count = 0;
 	int i;
+	if (!table) return 0;
 	for (i=0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
 		count += sprintf(buf+count, "%d: freq: %u MHz, volt: %u mV\n", i, table[i].frequency/1000,table[i].index/1000);
 	}
 	return count;
 }
 
-static ssize_t cpu_table_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+static ssize_t dvfs_table_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count, struct cpufreq_frequency_table *table)
 {
-	struct cpufreq_frequency_table *table = dvfs_get_freq_volt_table(clk_get(NULL, "cpu"));
 	int ret;
 	int i, index;
 	unsigned int v;
 
+	if (!table) return -EINVAL;
 	ret = sscanf(buf, "%d", &index);
 	if (!ret) return -EINVAL;
 
@@ -44,10 +44,30 @@ static ssize_t cpu_table_store(struct kobject *kobj, struct kobj_attribute *attr
 	return count;
 }
 
+#define DVFS_TABLE_SHOW(_name) static ssize_t _name##_table_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) { \
+	return dvfs_table_show(kobj, attr, buf, dvfs_get_freq_volt_table(clk_get(NULL, #_name))); \
+}
+
+#define DVFS_TABLE_STORE(_name) static ssize_t _name##_table_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) { \
+	return dvfs_table_store(kobj, attr, buf, count, dvfs_get_freq_volt_table(clk_get(NULL, #_name))); \
+}
+
+DVFS_TABLE_SHOW(cpu);
+DVFS_TABLE_STORE(cpu);
 ATTR_RW(cpu_table);
+
+DVFS_TABLE_SHOW(gpu);
+DVFS_TABLE_STORE(gpu);
+ATTR_RW(gpu_table);
+
+DVFS_TABLE_SHOW(ddr);
+DVFS_TABLE_STORE(ddr);
+ATTR_RW(ddr_table);
 
 static struct attribute *dvfs_attrs[] = {
 	&cpu_table_interface.attr,
+	&gpu_table_interface.attr,
+	&ddr_table_interface.attr,
 	NULL,
 };
 
