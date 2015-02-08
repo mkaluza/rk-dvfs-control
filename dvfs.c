@@ -21,6 +21,12 @@ static ssize_t dvfs_table_show(struct kobject *kobj, struct kobj_attribute *attr
 	return count;
 }
 
+inline unsigned int round_v_up(v, r) {
+	unsigned int d = v % r;
+	if (d) return v + (r-d);
+	return v;
+}
+
 static ssize_t dvfs_table_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count, struct cpufreq_frequency_table *table)
 {
 	int ret;
@@ -46,14 +52,17 @@ static ssize_t dvfs_table_store(struct kobject *kobj, struct kobj_attribute *att
 		printk(KERN_ERR "voltage out of range: %u", v);
 		return -EINVAL;
 	}
+
 	if (v<1200)
-		v = (v/25)*25*1000;
+		v = round_v_up(25)
 	else if (v<2400)
-		v = (v/50)*50*1000;
+		v = round_v_up(50)
 	else if (v<=3900)
-		v = (v/100)*100*1000;
+		v = round_v_up(100)
 	else
 		return -EINVAL;
+	v *= 1000;
+
 	table[i].index = v;
 
 	return count;
